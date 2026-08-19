@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  auth:
+    refresh-cookie-secure: ${COOKIE_SECURE:true}
+    refresh-cookie-same-site: '${COOKIE_SAME_SITE:None}'
+    cors-allowed-origin: ${CORS_ALLOWED_ORIGIN}

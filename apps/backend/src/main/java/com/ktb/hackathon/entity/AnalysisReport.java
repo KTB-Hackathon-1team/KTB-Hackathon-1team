@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -14,8 +15,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Getter
 @Entity
@@ -43,8 +42,8 @@ public class AnalysisReport extends BaseTimeEntity {
 	@Column(name = "parenting_guidance", nullable = false, columnDefinition = "LONGTEXT")
 	private String parentingGuidance;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "result_payload", nullable = false, columnDefinition = "JSON")
+	@Lob
+	@Column(name = "result_payload", nullable = false)
 	private String resultPayload;
 
 	@Column(name = "model_name", nullable = false, length = 100)

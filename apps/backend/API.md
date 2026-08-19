@@ -241,7 +241,7 @@ credentials: "include"
 
 ## CORS 및 프론트 환경
 
-현재 백엔드는 `http://localhost:5173`에서 오는 요청과 credentials를 허용합니다.
+로컬 프로필에서는 기본적으로 `http://localhost:5173`에서 오는 요청과 credentials를 허용합니다.
 
 프론트의 API 기본 주소는 다음처럼 관리하는 것을 권장합니다.
 
@@ -249,4 +249,15 @@ credentials: "include"
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
-프론트 배포 후에는 백엔드의 `application.yml`에서 `cors-allowed-origin`을 실제 프론트 주소로 변경해야 합니다.
+프론트와 백엔드를 별도 EC2에 배포할 때는 백엔드 실행 환경변수에 프론트의 Origin을 주입합니다.
+
+```bash
+SPRING_PROFILES_ACTIVE=prod
+CORS_ALLOWED_ORIGIN=https://front.example.com
+```
+
+`CORS_ALLOWED_ORIGIN`에는 경로를 제외한 프론트 주소를 넣습니다. 예를 들어
+`https://front.example.com`은 가능하지만 `https://front.example.com/login`은 사용할 수 없습니다.
+
+운영 프로필의 Refresh Token 쿠키는 기본적으로 `Secure=true`, `SameSite=None`입니다.
+따라서 프론트·백엔드가 서로 다른 사이트에서 호출되면 HTTPS를 사용해야 합니다.
