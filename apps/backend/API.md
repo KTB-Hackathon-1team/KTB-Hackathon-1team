@@ -345,6 +345,135 @@ s3:GetObject
 s3:DeleteObject
 ```
 
+## 8. 상담 상황 생성
+
+로그인한 부모가 본인이 소유한 아이의 상담 상황을 생성합니다. 생성된 상담 세션 ID는 이후 녹음 및 WebSocket 연결에 사용합니다.
+
+### Request
+
+```http
+POST /api/children/{childProfileId}/counseling-sessions
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+```json
+{
+  "title": "학원 숙제 때문에 갈등이 생겼어요",
+  "content": "오늘 아이가 숙제를 하지 않아 서로 감정이 상했습니다."
+}
+```
+
+### Response
+
+상태 코드: `201 Created`
+
+```json
+{
+  "message": "상담 상황 생성 성공",
+  "data": {
+    "id": 1,
+    "date": "2026-08-19",
+    "title": "학원 숙제 때문에 갈등이 생겼어요",
+    "content": "오늘 아이가 숙제를 하지 않아 서로 감정이 상했습니다."
+  }
+}
+```
+
+`title`은 필수이며 최대 200자입니다. `content`도 필수입니다.
+
+## 9. 아이별 상담 기록 목록 조회
+
+상담 기록은 최신순으로 조회하며 무한 스크롤을 위해 `cursorId`를 사용합니다. 한 번에 최대 5개까지 조회합니다.
+
+### Request
+
+```http
+GET /api/children/{childProfileId}/counseling-sessions?cursorId=20&size=5
+Authorization: Bearer {accessToken}
+```
+
+첫 목록은 `cursorId` 없이 요청합니다.
+
+### Response
+
+상태 코드: `200 OK`
+
+```json
+{
+  "message": "상담 기록 조회 성공",
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "date": "2026-08-19",
+        "title": "학원 숙제 때문에 갈등이 생겼어요",
+        "content": "오늘 아이가 숙제를 하지 않아 서로 감정이 상했습니다."
+      }
+    ],
+    "nextCursorId": 15,
+    "hasNext": true
+  }
+}
+```
+
+다음 목록이 있으면 `nextCursorId`를 다음 요청의 `cursorId`로 전달합니다. `size`는 1 이상 5 이하만 허용합니다.
+
+## 10. 상담 세션 상세 조회
+
+상담 세션의 현재 상태와 분석 결과를 조회합니다. 분석이 완료되지 않은 세션은 `analysisReport`가 `null`입니다.
+
+### Request
+
+```http
+GET /api/children/{childProfileId}/counseling-sessions/{sessionId}
+Authorization: Bearer {accessToken}
+```
+
+### Response
+
+상태 코드: `200 OK`
+
+```json
+{
+  "message": "상담 세션 상세 조회 성공",
+  "data": {
+    "id": 1,
+    "date": "2026-08-19",
+    "title": "학원 숙제 때문에 갈등이 생겼어요",
+    "content": "오늘 아이가 숙제를 하지 않아 서로 감정이 상했습니다.",
+    "status": "COMPLETED",
+    "startedAt": "2026-08-19T15:00:00",
+    "endedAt": "2026-08-19T15:20:00",
+    "analysisReport": {
+      "summary": "아이와 부모 모두 숙제 문제로 감정이 격해졌습니다.",
+      "emotionSummary": "아이에게 부담감과 서운함이 관찰되었습니다.",
+      "parentingGuidance": "지시보다 감정 확인을 먼저 시도해보세요.",
+      "resultPayload": null,
+      "modelName": "model-name",
+      "promptVersion": "v1"
+    }
+  }
+}
+```
+
+상담 상태는 `DRAFT`, `RECORDING`, `TRANSCRIBING`, `ANALYZING`, `COMPLETED`, `FAILED` 중 하나입니다. 다른 부모의 아이 또는 상담 세션이면 `404 Not Found`가 반환됩니다.
+
+## 11. 녹음 시작 준비
+
+녹음 버튼을 누를 때 호출합니다. 성공 후 응답의 `id`를 사용해 WebSocket에 연결합니다. WebSocket 연결 ID는 DB에 저장하지 않습니다.
+
+### Request
+
+```http
+POST /api/children/{childProfileId}/counseling-sessions/{sessionId}/start
+Authorization: Bearer {accessToken}
+```
+
+`DRAFT` 또는 `FAILED` 상태에서만 시작할 수 있습니다. 시작하면 상태가 `RECORDING`으로 바뀌고 `startedAt`이 기록됩니다.
+
+`RECORDING`, `TRANSCRIBING`, `ANALYZING`, `COMPLETED` 상태에서 호출하면 `409 Conflict`가 반환됩니다.
+
 ## 에러 응답
 
 에러도 `CommonResponse<Void>` 형식을 사용합니다.
@@ -362,6 +491,8 @@ s3:DeleteObject
 | 중복 loginId | `409 Conflict` | `이미 사용 중인 loginId입니다.` |
 | 로그인 실패 | `401 Unauthorized` | `loginId 또는 password가 올바르지 않습니다.` |
 | Refresh Token 오류 | `401 Unauthorized` | `Refresh Token이 유효하지 않거나 만료되었습니다.` |
+| 상담 세션을 찾을 수 없음 | `404 Not Found` | `상담 세션을 찾을 수 없습니다.` |
+| 녹음 시작 불가 상태 | `409 Conflict` | `현재 상담 상태에서는 녹음을 시작할 수 없습니다.` |
 
 ## CORS 및 프론트 환경
 
