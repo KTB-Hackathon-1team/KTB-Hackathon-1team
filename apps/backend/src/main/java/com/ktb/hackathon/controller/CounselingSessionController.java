@@ -1,6 +1,7 @@
 package com.ktb.hackathon.controller;
 
 import com.ktb.hackathon.auth.AuthenticatedUser;
+import com.ktb.hackathon.dto.request.CounselingHandoffRequest;
 import com.ktb.hackathon.dto.request.CounselingSessionCreateRequest;
 import com.ktb.hackathon.dto.response.CommonResponse;
 import com.ktb.hackathon.dto.response.CounselingSessionDetailResponse;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -90,5 +92,32 @@ public class CounselingSessionController {
 		);
 
 		return ResponseEntity.ok(CommonResponse.of("녹음 시작 준비 성공", response));
+	}
+
+	@PostMapping("/{sessionId}/handoff")
+	public ResponseEntity<CommonResponse<CounselingSessionDetailResponse>> saveHandoff(
+		@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+		@PathVariable Long childProfileId,
+		@PathVariable Long sessionId,
+		@Valid @RequestBody CounselingHandoffRequest request
+	) {
+		CounselingSessionDetailResponse response = counselingSessionService.saveHandoff(
+			authenticatedUser,
+			childProfileId,
+			sessionId,
+			request
+		);
+
+		return ResponseEntity.ok(CommonResponse.of("대화 저장 성공", response));
+	}
+
+	@DeleteMapping("/{sessionId}")
+	public ResponseEntity<CommonResponse<Void>> delete(
+		@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+		@PathVariable Long childProfileId,
+		@PathVariable Long sessionId
+	) {
+		counselingSessionService.delete(authenticatedUser, childProfileId, sessionId);
+		return ResponseEntity.ok(CommonResponse.of("상담 세션 삭제 성공", null));
 	}
 }

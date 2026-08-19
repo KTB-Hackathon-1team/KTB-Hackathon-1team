@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ConversationMessageRepository extends JpaRepository<ConversationMessage, Long> {
 
 	List<ConversationMessage> findAllByCounselingSessionIdOrderBySequenceNoAsc(Long counselingSessionId);
+
+	void deleteAllByCounselingSessionId(Long counselingSessionId);
 }

@@ -61,4 +61,10 @@ public class ChildProfile extends BaseTimeEntity {
 	public void updateProfileImageKey(String profileImageKey) {
 		this.profileImageKey = profileImageKey;
 	}
+
+	public void updateProfile(String name, LocalDate birthDate, ChildGender gender) {
+		this.name = name;
+		this.birthDate = birthDate;
+		this.gender = gender;
+	}
 }

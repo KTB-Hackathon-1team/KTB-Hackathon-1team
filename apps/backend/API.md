@@ -436,7 +436,7 @@ Authorization: Bearer {accessToken}
 
 ## 10. 상담 세션 상세 조회
 
-상담 세션의 현재 상태와 분석 결과를 조회합니다. 분석이 완료되지 않은 세션은 `analysisReport`가 `null`입니다.
+상담 세션의 현재 상태와 대화 내용, 분석 결과를 조회합니다. 실제 AI 분석이 완료되지 않은 세션은 `analysisReport`가 `null`입니다.
 
 ### Request
 
@@ -460,6 +460,19 @@ Authorization: Bearer {accessToken}
     "status": "COMPLETED",
     "startedAt": "2026-08-19T15:00:00",
     "endedAt": "2026-08-19T15:20:00",
+    "conversation": {
+      "turns": [
+        {
+          "role": "user",
+          "text": "너무 어려워요"
+        },
+        {
+          "role": "assistant",
+          "text": "어떤 게 어려웠는지 같이 얘기해볼까?"
+        }
+      ],
+      "text": "아이: 너무 어려워요\n에이전트: 어떤 게 어려웠는지 같이 얘기해볼까?"
+    },
     "analysisReport": {
       "summary": "아이와 부모 모두 숙제 문제로 감정이 격해졌습니다.",
       "emotionSummary": "아이에게 부담감과 서운함이 관찰되었습니다.",
@@ -490,6 +503,129 @@ Authorization: Bearer {accessToken}
 `RECORDING`, `TRANSCRIBING`, `ANALYZING`, `COMPLETED` 상태에서 호출하면 `409 Conflict`가 반환됩니다.
 다음 목록이 있으면 응답의 `nextCursorId`를 다음 요청의 `cursorId`로 전달합니다. `size`는 1 이상 5 이하만 허용합니다.
 
+## 12. 아이 프로필 수정
+
+로그인한 부모가 본인이 소유한 아이 프로필의 이름, 생년월일, 성별을 수정합니다. 기존 아이 프로필 생성 요청과 동일한 요청 형식을 사용합니다. 프로필 이미지는 기존 이미지 업로드 API에서 별도로 수정합니다.
+
+### Request
+
+```http
+PUT /api/children/{childProfileId}
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "김아이",
+  "birthDate": "2015-03-20",
+  "gender": "FEMALE"
+}
+```
+
+### Response
+
+상태 코드: `200 OK`
+
+```json
+{
+  "message": "아이 프로필 수정 성공",
+  "data": {
+    "id": 1,
+    "name": "김아이",
+    "birthDate": "2015-03-20",
+    "gender": "FEMALE",
+    "profileImageUrl": null
+  }
+}
+```
+
+## 13. 아이 프로필 삭제
+
+로그인한 부모가 본인이 소유한 아이 프로필을 삭제합니다. 아이에게 연결된 상담 세션, 대화 메시지, 분석 리포트, 녹음 메타데이터도 함께 삭제됩니다. 연결된 S3 프로필 이미지와 녹음 파일은 삭제를 시도하며, S3 삭제 실패는 로그로 기록됩니다.
+
+### Request
+
+```http
+DELETE /api/children/{childProfileId}
+Authorization: Bearer {accessToken}
+```
+
+### Response
+
+상태 코드: `200 OK`
+
+```json
+{
+  "message": "아이 프로필 삭제 성공",
+  "data": null
+}
+```
+
+## 14. 상담 세션 삭제
+
+로그인한 부모가 본인이 소유한 상담 세션을 삭제합니다. 모든 상담 상태에서 삭제할 수 있으며, 연결된 대화 메시지, 분석 리포트, 녹음 메타데이터도 함께 삭제됩니다.
+
+### Request
+
+```http
+DELETE /api/children/{childProfileId}/counseling-sessions/{sessionId}
+Authorization: Bearer {accessToken}
+```
+
+`DRAFT`, `RECORDING`, `TRANSCRIBING`, `ANALYZING`, `COMPLETED`, `FAILED` 상태 모두 삭제할 수 있습니다. 진행 중인 세션도 즉시 삭제되므로, 프론트에서는 삭제 전에 진행 중인 음성 연결을 종료해야 합니다.
+
+### Response
+
+상태 코드: `200 OK`
+
+```json
+{
+  "message": "상담 세션 삭제 성공",
+  "data": null
+}
+```
+
+## 15. 대화 JSON 저장
+
+voice-client가 대화 종료 후 생성한 handoff JSON을 저장합니다. `turns`는 `ConversationMessage`로 저장되고, 저장된 대화는 상담 상세 조회에서 `conversation`으로 반환됩니다. `analysisReport`는 추후 AI 분석 결과를 저장하기 위한 영역입니다.
+
+### Request
+
+```http
+POST /api/children/{childProfileId}/counseling-sessions/{sessionId}/handoff
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+```json
+{
+  "turns": [
+    {
+      "role": "user",
+      "text": "너무 어려워요",
+      "itemId": "item_1",
+      "status": "completed"
+    },
+    {
+      "role": "assistant",
+      "text": "어떤 게 어려웠는지 같이 얘기해볼까?",
+      "itemId": "item_2",
+      "status": "completed"
+    }
+  ],
+  "text": "아이: 너무 어려워요\n에이전트: 어떤 게 어려웠는지 같이 얘기해볼까?"
+}
+```
+
+`role`은 `user` 또는 `assistant`만 허용합니다. `itemId`와 `status`는 현재 DB에 저장하지 않습니다. `RECORDING` 상태의 세션만 대화를 저장할 수 있으며, 저장 후 상담 상세 조회에서 대화 내용을 확인할 수 있습니다.
+
+### Response
+
+상태 코드: `200 OK`
+
+응답은 저장된 `conversation`이 포함된 상담 세션 상세 응답과 동일한 형식입니다.
+
 ## 에러 응답
 
 에러도 `CommonResponse<Void>` 형식을 사용합니다.
@@ -507,8 +643,11 @@ Authorization: Bearer {accessToken}
 | 중복 loginId | `409 Conflict` | `이미 사용 중인 loginId입니다.` |
 | 로그인 실패 | `401 Unauthorized` | `loginId 또는 password가 올바르지 않습니다.` |
 | Refresh Token 오류 | `401 Unauthorized` | `Refresh Token이 유효하지 않거나 만료되었습니다.` |
+| 잘못된 대화 role | `400 Bad Request` | `role은 user 또는 assistant만 사용할 수 있습니다.` |
+| 아이 프로필을 찾을 수 없음 | `404 Not Found` | `아이 프로필을 찾을 수 없습니다.` |
 | 상담 세션을 찾을 수 없음 | `404 Not Found` | `상담 세션을 찾을 수 없습니다.` |
 | 녹음 시작 불가 상태 | `409 Conflict` | `현재 상담 상태에서는 녹음을 시작할 수 없습니다.` |
+| 대화 저장 불가 상태 | `409 Conflict` | `RECORDING 상태의 상담 세션만 대화를 저장할 수 있습니다.` |
 
 ## CORS 및 프론트 환경
 

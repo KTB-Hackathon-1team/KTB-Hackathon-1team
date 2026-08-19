@@ -1,17 +1,23 @@
 package com.ktb.hackathon.service;
 
 import com.ktb.hackathon.auth.AuthenticatedUser;
+import com.ktb.hackathon.dto.request.CounselingHandoffRequest;
 import com.ktb.hackathon.dto.request.CounselingSessionCreateRequest;
+import com.ktb.hackathon.dto.request.CounselingTurnRequest;
+import com.ktb.hackathon.dto.response.ConversationResponse;
 import com.ktb.hackathon.dto.response.CounselingSessionDetailResponse;
 import com.ktb.hackathon.dto.response.CounselingSessionListResponse;
 import com.ktb.hackathon.dto.response.CounselingSessionResponse;
 import com.ktb.hackathon.entity.AnalysisReport;
 import com.ktb.hackathon.entity.ChildProfile;
+import com.ktb.hackathon.entity.ConversationMessage;
 import com.ktb.hackathon.entity.CounselingSession;
 import com.ktb.hackathon.entity.enums.CounselingStatus;
+import com.ktb.hackathon.entity.enums.MessageSpeaker;
 import com.ktb.hackathon.exception.AuthException;
 import com.ktb.hackathon.repository.AnalysisReportRepository;
 import com.ktb.hackathon.repository.ChildProfileRepository;
+import com.ktb.hackathon.repository.ConversationMessageRepository;
 import com.ktb.hackathon.repository.CounselingSessionRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,15 +35,24 @@ public class CounselingSessionService {
 	private final CounselingSessionRepository counselingSessionRepository;
 	private final ChildProfileRepository childProfileRepository;
 	private final AnalysisReportRepository analysisReportRepository;
+	private final ConversationMessageRepository conversationMessageRepository;
+	private final CounselingSessionCleanupService counselingSessionCleanupService;
+	private final S3ImageService s3ImageService;
 
 	public CounselingSessionService(
 		CounselingSessionRepository counselingSessionRepository,
 		ChildProfileRepository childProfileRepository,
-		AnalysisReportRepository analysisReportRepository
+		AnalysisReportRepository analysisReportRepository,
+		ConversationMessageRepository conversationMessageRepository,
+		CounselingSessionCleanupService counselingSessionCleanupService,
+		S3ImageService s3ImageService
 	) {
 		this.counselingSessionRepository = counselingSessionRepository;
 		this.childProfileRepository = childProfileRepository;
 		this.analysisReportRepository = analysisReportRepository;
+		this.conversationMessageRepository = conversationMessageRepository;
+		this.counselingSessionCleanupService = counselingSessionCleanupService;
+		this.s3ImageService = s3ImageService;
 	}
 
 	@Transactional
@@ -135,12 +150,86 @@ public class CounselingSessionService {
 		return toDetailResponse(counselingSession);
 	}
 
+	@Transactional
+	public CounselingSessionDetailResponse saveHandoff(
+		AuthenticatedUser authenticatedUser,
+		Long childProfileId,
+		Long sessionId,
+		CounselingHandoffRequest request
+	) {
+		CounselingSession counselingSession = findOwnedSession(
+			authenticatedUser,
+			childProfileId,
+			sessionId
+		);
+
+		if (counselingSession.getStatus() != CounselingStatus.RECORDING) {
+			throw new AuthException(
+				HttpStatus.CONFLICT,
+				"COUNSELING_HANDOFF_NOT_ALLOWED",
+				"RECORDING 상태의 상담 세션만 대화를 저장할 수 있습니다."
+			);
+		}
+
+		List<ConversationMessage> messages = new ArrayList<>();
+		int sequenceNo = 1;
+		for (CounselingTurnRequest turn : request.turns()) {
+			messages.add(ConversationMessage.builder()
+				.counselingSession(counselingSession)
+				.sequenceNo(sequenceNo++)
+				.speaker(toSpeaker(turn.role()))
+				.content(turn.text())
+				.build());
+		}
+
+		conversationMessageRepository.saveAll(messages);
+		counselingSession.markTranscribing();
+		counselingSession.markAnalyzing();
+		counselingSession.complete();
+		conversationMessageRepository.flush();
+
+		return toDetailResponse(counselingSession);
+	}
+
+	@Transactional
+	public void delete(
+		AuthenticatedUser authenticatedUser,
+		Long childProfileId,
+		Long sessionId
+	) {
+		CounselingSession counselingSession = findOwnedSession(
+			authenticatedUser,
+			childProfileId,
+			sessionId
+		);
+		String recordingKey = counselingSessionCleanupService.delete(counselingSession);
+		counselingSessionRepository.flush();
+		s3ImageService.deleteQuietly(recordingKey);
+	}
+
 	private CounselingSessionDetailResponse toDetailResponse(CounselingSession counselingSession) {
 		AnalysisReport analysisReport = counselingSession.getStatus() == CounselingStatus.COMPLETED
 			? analysisReportRepository.findByCounselingSessionId(counselingSession.getId()).orElse(null)
 			: null;
+		ConversationResponse conversation = ConversationResponse.from(
+			conversationMessageRepository.findAllByCounselingSessionIdOrderBySequenceNoAsc(
+				counselingSession.getId()
+			)
+		);
 
-		return CounselingSessionDetailResponse.from(counselingSession, analysisReport);
+		return CounselingSessionDetailResponse.from(counselingSession, analysisReport, conversation);
+	}
+
+	private MessageSpeaker toSpeaker(String role) {
+		return switch (role) {
+			case "user" -> MessageSpeaker.CHILD;
+			case "assistant" -> MessageSpeaker.AI;
+			default -> throw new AuthException(
+				HttpStatus.BAD_REQUEST,
+				"INVALID_CONVERSATION_ROLE",
+				"role은 user 또는 assistant만 사용할 수 있습니다."
+			);
+		};
 	}
 
 	private ChildProfile findOwnedChildProfile(

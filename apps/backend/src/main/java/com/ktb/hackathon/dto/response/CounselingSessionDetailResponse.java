@@ -14,12 +14,14 @@ public record CounselingSessionDetailResponse(
 	CounselingStatus status,
 	LocalDateTime startedAt,
 	LocalDateTime endedAt,
+	ConversationResponse conversation,
 	AnalysisReportResponse analysisReport
 ) {
 
 	public static CounselingSessionDetailResponse from(
 		CounselingSession counselingSession,
-		AnalysisReport analysisReport
+		AnalysisReport analysisReport,
+		ConversationResponse conversation
 	) {
 		return new CounselingSessionDetailResponse(
 			counselingSession.getId(),
@@ -29,6 +31,7 @@ public record CounselingSessionDetailResponse(
 			counselingSession.getStatus(),
 			counselingSession.getStartedAt(),
 			counselingSession.getEndedAt(),
+			conversation,
 			AnalysisReportResponse.from(analysisReport)
 		);
 	}
