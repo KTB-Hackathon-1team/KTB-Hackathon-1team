@@ -39,8 +39,11 @@ public class CounselingSession extends BaseTimeEntity {
 	@JoinColumn(name = "child_profile_id", nullable = false)
 	private ChildProfile childProfile;
 
+	@Column(nullable = false, length = 200)
+	private String title;
+
 	@Column(name = "situation_text", nullable = false, columnDefinition = "LONGTEXT")
-	private String situationText;
+	private String content;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 30)
@@ -58,11 +61,13 @@ public class CounselingSession extends BaseTimeEntity {
 	@Builder
 	private CounselingSession(
 		ChildProfile childProfile,
-		String situationText,
+		String title,
+		String content,
 		LocalDateTime recordingConsentAt
 	) {
 		this.childProfile = childProfile;
-		this.situationText = situationText;
+		this.title = title;
+		this.content = content;
 		this.recordingConsentAt = recordingConsentAt;
 		this.status = CounselingStatus.DRAFT;
 	}
