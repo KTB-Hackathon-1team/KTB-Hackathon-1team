@@ -11,6 +11,7 @@ frontend/dist/
 backend/build/
 backend/.gradle/
 backend/out/
+**/*.class
 
 # Local environment files
 **/.env
