@@ -221,7 +221,37 @@ credentials: "include"
 3. 성공하면 응답의 새 Access Token을 저장합니다.
 4. 실패하면 로그인 화면으로 이동합니다.
 
-## 5. 아이 프로필 생성
+## 5. 아이 프로필 목록 조회
+
+로그인한 부모가 본인이 등록한 아이 프로필 목록을 조회합니다. 생성된 순서대로 반환하며, 등록된 아이가 없으면 빈 배열을 반환합니다.
+
+### Request
+
+```http
+GET /api/children
+Authorization: Bearer {accessToken}
+```
+
+### Response
+
+상태 코드: `200 OK`
+
+```json
+{
+  "message": "아이 프로필 목록 조회 성공",
+  "data": [
+    {
+      "id": 1,
+      "name": "민준",
+      "birthDate": "2016-05-12",
+      "gender": "MALE",
+      "profileImageUrl": null
+    }
+  ]
+}
+```
+
+## 6. 아이 프로필 생성
 
 로그인 후 발급받은 Access Token이 필요한 API입니다. JWT의 부모 계정 ID를 기준으로 아이 프로필의 부모가 자동 연결됩니다.
 
@@ -260,7 +290,7 @@ Content-Type: application/json
 }
 ```
 
-## 6. 아이 프로필 이미지 업로드
+## 7. 아이 프로필 이미지 업로드
 
 로그인한 부모가 본인이 소유한 아이 프로필에 이미지를 업로드합니다. 이미지 파일은 S3에 저장되고, DB에는 S3 객체 키만 저장됩니다.
 
