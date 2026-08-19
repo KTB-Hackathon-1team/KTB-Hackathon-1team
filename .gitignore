@@ -4,13 +4,13 @@
 .DS_Store
 
 # Frontend dependencies and build output
-frontend/node_modules/
-frontend/dist/
+apps/frontend/node_modules/
+apps/frontend/dist/
 
 # Backend build output
-backend/build/
-backend/.gradle/
-backend/out/
+apps/backend/build/
+apps/backend/.gradle/
+apps/backend/out/
 **/*.class
 
 # Local environment files
