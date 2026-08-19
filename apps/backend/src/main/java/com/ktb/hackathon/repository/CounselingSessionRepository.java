@@ -12,6 +12,12 @@ public interface CounselingSessionRepository extends JpaRepository<CounselingSes
 
 	List<CounselingSession> findAllByChildProfileParentAccountIdOrderByCreatedAtDesc(Long parentAccountId);
 
+	Optional<CounselingSession> findByIdAndChildProfileIdAndChildProfileParentAccountId(
+		Long sessionId,
+		Long childProfileId,
+		Long parentAccountId
+	);
+
 	List<CounselingSession> findAllByChildProfileIdAndChildProfileParentAccountIdOrderByIdDesc(
 		Long childProfileId,
 		Long parentAccountId,

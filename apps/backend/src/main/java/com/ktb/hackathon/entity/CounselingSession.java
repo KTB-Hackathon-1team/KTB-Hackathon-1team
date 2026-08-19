@@ -71,4 +71,53 @@ public class CounselingSession extends BaseTimeEntity {
 		this.recordingConsentAt = recordingConsentAt;
 		this.status = CounselingStatus.DRAFT;
 	}
+
+	public boolean canStartRecording() {
+		return status == CounselingStatus.DRAFT || status == CounselingStatus.FAILED;
+	}
+
+	public void startRecording() {
+		if (!canStartRecording()) {
+			throw new IllegalStateException("현재 상담 상태에서는 녹음을 시작할 수 없습니다.");
+		}
+
+		this.status = CounselingStatus.RECORDING;
+		this.startedAt = LocalDateTime.now();
+		this.endedAt = null;
+	}
+
+	public void markTranscribing() {
+		requireStatus(CounselingStatus.RECORDING);
+		this.status = CounselingStatus.TRANSCRIBING;
+		this.endedAt = LocalDateTime.now();
+	}
+
+	public void markAnalyzing() {
+		requireStatus(CounselingStatus.TRANSCRIBING);
+		this.status = CounselingStatus.ANALYZING;
+	}
+
+	public void complete() {
+		requireStatus(CounselingStatus.ANALYZING);
+		this.status = CounselingStatus.COMPLETED;
+	}
+
+	public void fail() {
+		if (status == CounselingStatus.COMPLETED) {
+			throw new IllegalStateException("완료된 상담은 실패 상태로 변경할 수 없습니다.");
+		}
+
+		this.status = CounselingStatus.FAILED;
+		if (this.endedAt == null) {
+			this.endedAt = LocalDateTime.now();
+		}
+	}
+
+	private void requireStatus(CounselingStatus expectedStatus) {
+		if (this.status != expectedStatus) {
+			throw new IllegalStateException(
+				"상담 상태가 " + expectedStatus + "일 때만 상태를 변경할 수 있습니다."
+			);
+		}
+	}
 }

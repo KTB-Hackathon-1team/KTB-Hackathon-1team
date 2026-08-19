@@ -2,11 +2,15 @@ package com.ktb.hackathon.service;
 
 import com.ktb.hackathon.auth.AuthenticatedUser;
 import com.ktb.hackathon.dto.request.CounselingSessionCreateRequest;
-import com.ktb.hackathon.dto.response.CounselingSessionResponse;
+import com.ktb.hackathon.dto.response.CounselingSessionDetailResponse;
 import com.ktb.hackathon.dto.response.CounselingSessionListResponse;
+import com.ktb.hackathon.dto.response.CounselingSessionResponse;
+import com.ktb.hackathon.entity.AnalysisReport;
 import com.ktb.hackathon.entity.ChildProfile;
 import com.ktb.hackathon.entity.CounselingSession;
+import com.ktb.hackathon.entity.enums.CounselingStatus;
 import com.ktb.hackathon.exception.AuthException;
+import com.ktb.hackathon.repository.AnalysisReportRepository;
 import com.ktb.hackathon.repository.ChildProfileRepository;
 import com.ktb.hackathon.repository.CounselingSessionRepository;
 import java.util.ArrayList;
@@ -24,13 +28,16 @@ public class CounselingSessionService {
 
 	private final CounselingSessionRepository counselingSessionRepository;
 	private final ChildProfileRepository childProfileRepository;
+	private final AnalysisReportRepository analysisReportRepository;
 
 	public CounselingSessionService(
 		CounselingSessionRepository counselingSessionRepository,
-		ChildProfileRepository childProfileRepository
+		ChildProfileRepository childProfileRepository,
+		AnalysisReportRepository analysisReportRepository
 	) {
 		this.counselingSessionRepository = counselingSessionRepository;
 		this.childProfileRepository = childProfileRepository;
+		this.analysisReportRepository = analysisReportRepository;
 	}
 
 	@Transactional
@@ -90,6 +97,52 @@ public class CounselingSessionService {
 		return new CounselingSessionListResponse(items, nextCursorId, hasNext);
 	}
 
+	public CounselingSessionDetailResponse findDetail(
+		AuthenticatedUser authenticatedUser,
+		Long childProfileId,
+		Long sessionId
+	) {
+		CounselingSession counselingSession = findOwnedSession(
+			authenticatedUser,
+			childProfileId,
+			sessionId
+		);
+
+		return toDetailResponse(counselingSession);
+	}
+
+	@Transactional
+	public CounselingSessionDetailResponse startRecording(
+		AuthenticatedUser authenticatedUser,
+		Long childProfileId,
+		Long sessionId
+	) {
+		CounselingSession counselingSession = findOwnedSession(
+			authenticatedUser,
+			childProfileId,
+			sessionId
+		);
+
+		if (!counselingSession.canStartRecording()) {
+			throw new AuthException(
+				HttpStatus.CONFLICT,
+				"COUNSELING_SESSION_NOT_STARTABLE",
+				"현재 상담 상태에서는 녹음을 시작할 수 없습니다."
+			);
+		}
+
+		counselingSession.startRecording();
+		return toDetailResponse(counselingSession);
+	}
+
+	private CounselingSessionDetailResponse toDetailResponse(CounselingSession counselingSession) {
+		AnalysisReport analysisReport = counselingSession.getStatus() == CounselingStatus.COMPLETED
+			? analysisReportRepository.findByCounselingSessionId(counselingSession.getId()).orElse(null)
+			: null;
+
+		return CounselingSessionDetailResponse.from(counselingSession, analysisReport);
+	}
+
 	private ChildProfile findOwnedChildProfile(
 		AuthenticatedUser authenticatedUser,
 		Long childProfileId
@@ -101,6 +154,22 @@ public class CounselingSessionService {
 			HttpStatus.NOT_FOUND,
 			"CHILD_PROFILE_NOT_FOUND",
 			"아이 프로필을 찾을 수 없습니다."
+		));
+	}
+
+	private CounselingSession findOwnedSession(
+		AuthenticatedUser authenticatedUser,
+		Long childProfileId,
+		Long sessionId
+	) {
+		return counselingSessionRepository.findByIdAndChildProfileIdAndChildProfileParentAccountId(
+			sessionId,
+			childProfileId,
+			authenticatedUser.parentAccountId()
+		).orElseThrow(() -> new AuthException(
+			HttpStatus.NOT_FOUND,
+			"COUNSELING_SESSION_NOT_FOUND",
+			"상담 세션을 찾을 수 없습니다."
 		));
 	}
 

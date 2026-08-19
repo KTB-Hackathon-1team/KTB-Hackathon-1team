@@ -3,8 +3,9 @@ package com.ktb.hackathon.controller;
 import com.ktb.hackathon.auth.AuthenticatedUser;
 import com.ktb.hackathon.dto.request.CounselingSessionCreateRequest;
 import com.ktb.hackathon.dto.response.CommonResponse;
-import com.ktb.hackathon.dto.response.CounselingSessionResponse;
+import com.ktb.hackathon.dto.response.CounselingSessionDetailResponse;
 import com.ktb.hackathon.dto.response.CounselingSessionListResponse;
+import com.ktb.hackathon.dto.response.CounselingSessionResponse;
 import com.ktb.hackathon.service.CounselingSessionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -59,5 +60,35 @@ public class CounselingSessionController {
 		);
 
 		return ResponseEntity.ok(CommonResponse.of("상담 기록 조회 성공", response));
+	}
+
+	@GetMapping("/{sessionId}")
+	public ResponseEntity<CommonResponse<CounselingSessionDetailResponse>> findDetail(
+		@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+		@PathVariable Long childProfileId,
+		@PathVariable Long sessionId
+	) {
+		CounselingSessionDetailResponse response = counselingSessionService.findDetail(
+			authenticatedUser,
+			childProfileId,
+			sessionId
+		);
+
+		return ResponseEntity.ok(CommonResponse.of("상담 세션 상세 조회 성공", response));
+	}
+
+	@PostMapping("/{sessionId}/start")
+	public ResponseEntity<CommonResponse<CounselingSessionDetailResponse>> startRecording(
+		@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+		@PathVariable Long childProfileId,
+		@PathVariable Long sessionId
+	) {
+		CounselingSessionDetailResponse response = counselingSessionService.startRecording(
+			authenticatedUser,
+			childProfileId,
+			sessionId
+		);
+
+		return ResponseEntity.ok(CommonResponse.of("녹음 시작 준비 성공", response));
 	}
 }
