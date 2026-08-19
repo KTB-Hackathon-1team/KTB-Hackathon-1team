@@ -3,10 +3,6 @@ package com.ktb.hackathon.config;
 import com.ktb.hackathon.auth.AuthProperties;
 import com.ktb.hackathon.auth.JwtAuthenticationFilter;
 import com.ktb.hackathon.auth.JwtProperties;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,18 +23,17 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
 @Configuration
 @EnableConfigurationProperties({JwtProperties.class, AuthProperties.class})
 public class SecurityConfig {
 
-	private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
-		this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-	}
-
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
 		http
 			.csrf(AbstractHttpConfigurer::disable)
 			.cors(Customizer.withDefaults())
