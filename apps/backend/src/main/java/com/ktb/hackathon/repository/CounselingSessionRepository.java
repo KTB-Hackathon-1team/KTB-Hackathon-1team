@@ -24,6 +24,11 @@ public interface CounselingSessionRepository extends JpaRepository<CounselingSes
 		Pageable pageable
 	);
 
+	List<CounselingSession> findAllByChildProfileIdAndChildProfileParentAccountIdOrderByIdDesc(
+		Long childProfileId,
+		Long parentAccountId
+	);
+
 	List<CounselingSession> findAllByChildProfileIdAndChildProfileParentAccountIdAndIdLessThanOrderByIdDesc(
 		Long childProfileId,
 		Long parentAccountId,

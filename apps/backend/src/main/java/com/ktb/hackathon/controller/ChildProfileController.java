@@ -11,8 +11,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -46,6 +48,29 @@ public class ChildProfileController {
 		ChildProfileResponse childProfile = childProfileService.create(authenticatedUser, request);
 		return ResponseEntity.status(HttpStatus.CREATED)
 			.body(CommonResponse.of("아이 프로필 생성 성공", childProfile));
+	}
+
+	@PutMapping("/{childProfileId}")
+	public ResponseEntity<CommonResponse<ChildProfileResponse>> update(
+		@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+		@PathVariable Long childProfileId,
+		@Valid @RequestBody ChildProfileCreateRequest request
+	) {
+		ChildProfileResponse childProfile = childProfileService.update(
+			authenticatedUser,
+			childProfileId,
+			request
+		);
+		return ResponseEntity.ok(CommonResponse.of("아이 프로필 수정 성공", childProfile));
+	}
+
+	@DeleteMapping("/{childProfileId}")
+	public ResponseEntity<CommonResponse<Void>> delete(
+		@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+		@PathVariable Long childProfileId
+	) {
+		childProfileService.delete(authenticatedUser, childProfileId);
+		return ResponseEntity.ok(CommonResponse.of("아이 프로필 삭제 성공", null));
 	}
 
 	@PostMapping(value = "/{childProfileId}/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

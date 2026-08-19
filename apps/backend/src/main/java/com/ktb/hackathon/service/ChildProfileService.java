@@ -4,10 +4,13 @@ import com.ktb.hackathon.auth.AuthenticatedUser;
 import com.ktb.hackathon.dto.request.ChildProfileCreateRequest;
 import com.ktb.hackathon.dto.response.ChildProfileResponse;
 import com.ktb.hackathon.entity.ChildProfile;
+import com.ktb.hackathon.entity.CounselingSession;
 import com.ktb.hackathon.entity.ParentAccount;
 import com.ktb.hackathon.exception.AuthException;
 import com.ktb.hackathon.repository.ChildProfileRepository;
+import com.ktb.hackathon.repository.CounselingSessionRepository;
 import com.ktb.hackathon.repository.ParentAccountRepository;
+import java.util.ArrayList;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,15 +24,21 @@ public class ChildProfileService {
 	private final ChildProfileRepository childProfileRepository;
 	private final ParentAccountRepository parentAccountRepository;
 	private final S3ImageService s3ImageService;
+	private final CounselingSessionRepository counselingSessionRepository;
+	private final CounselingSessionCleanupService counselingSessionCleanupService;
 
 	public ChildProfileService(
 		ChildProfileRepository childProfileRepository,
 		ParentAccountRepository parentAccountRepository,
-		S3ImageService s3ImageService
+		S3ImageService s3ImageService,
+		CounselingSessionRepository counselingSessionRepository,
+		CounselingSessionCleanupService counselingSessionCleanupService
 	) {
 		this.childProfileRepository = childProfileRepository;
 		this.parentAccountRepository = parentAccountRepository;
 		this.s3ImageService = s3ImageService;
+		this.counselingSessionRepository = counselingSessionRepository;
+		this.counselingSessionCleanupService = counselingSessionCleanupService;
 	}
 
 	@Transactional
@@ -52,6 +61,17 @@ public class ChildProfileService {
 			.build();
 
 		return toResponse(childProfileRepository.save(childProfile));
+	}
+
+	@Transactional
+	public ChildProfileResponse update(
+		AuthenticatedUser authenticatedUser,
+		Long childProfileId,
+		ChildProfileCreateRequest request
+	) {
+		ChildProfile childProfile = findOwnedChildProfile(authenticatedUser, childProfileId);
+		childProfile.updateProfile(request.name(), request.birthDate(), request.gender());
+		return toResponse(childProfile);
 	}
 
 	@Transactional(readOnly = true)
@@ -81,6 +101,33 @@ public class ChildProfileService {
 		ChildProfileResponse response = toResponse(childProfile);
 		s3ImageService.deleteQuietly(previousImageKey);
 		return response;
+	}
+
+	@Transactional
+	public void delete(AuthenticatedUser authenticatedUser, Long childProfileId) {
+		ChildProfile childProfile = findOwnedChildProfile(authenticatedUser, childProfileId);
+		List<CounselingSession> counselingSessions = counselingSessionRepository
+			.findAllByChildProfileIdAndChildProfileParentAccountIdOrderByIdDesc(
+				childProfileId,
+				authenticatedUser.parentAccountId()
+			);
+		List<String> recordingKeys = new ArrayList<>();
+
+		for (CounselingSession counselingSession : counselingSessions) {
+			String recordingKey = counselingSessionCleanupService.delete(counselingSession);
+			if (recordingKey != null) {
+				recordingKeys.add(recordingKey);
+			}
+		}
+
+		counselingSessionRepository.flush();
+		childProfileRepository.delete(childProfile);
+		childProfileRepository.flush();
+
+		s3ImageService.deleteQuietly(childProfile.getProfileImageKey());
+		for (String recordingKey : recordingKeys) {
+			s3ImageService.deleteQuietly(recordingKey);
+		}
 	}
 
 	private ChildProfile findOwnedChildProfile(AuthenticatedUser authenticatedUser, Long childProfileId) {
