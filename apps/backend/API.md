@@ -345,7 +345,7 @@ s3:GetObject
 s3:DeleteObject
 ```
 
-## 8. 상담 상황 생성
+## 7. 상담 상황 생성
 
 로그인한 부모가 본인이 소유한 아이의 상담 상황을 생성합니다. 생성된 상담 세션 ID는 이후 녹음 및 WebSocket 연결에 사용합니다.
 
@@ -360,7 +360,7 @@ Content-Type: application/json
 ```json
 {
   "title": "학원 숙제 때문에 갈등이 생겼어요",
-  "content": "오늘 아이가 숙제를 하지 않아 서로 감정이 상했습니다."
+  "content": "오늘 아이가 숙제를 하지 않아 이야기하는 과정에서 서로 감정이 상했습니다."
 }
 ```
 
@@ -385,6 +385,18 @@ Content-Type: application/json
 ## 9. 아이별 상담 기록 목록 조회
 
 상담 기록은 최신순으로 조회하며 무한 스크롤을 위해 `cursorId`를 사용합니다. 한 번에 최대 5개까지 조회합니다.
+    "content": "오늘 아이가 숙제를 하지 않아 이야기하는 과정에서 서로 감정이 상했습니다."
+  }
+}
+```
+
+`title`은 필수이며 최대 200자입니다. `content`도 필수입니다. `date`는 생성일 기준 `yyyy-MM-dd` 형식입니다.
+
+다른 부모의 `childProfileId`를 사용하면 `404 Not Found`가 반환됩니다.
+
+## 8. 아이별 상담 기록 목록 조회
+
+로그인한 부모가 본인이 소유한 아이와 진행한 상담 기록을 최신순으로 조회합니다. 한 번에 최대 5개까지 조회하며 `cursorId`를 사용해 다음 목록을 요청합니다.
 
 ### Request
 
@@ -394,6 +406,8 @@ Authorization: Bearer {accessToken}
 ```
 
 첫 목록은 `cursorId` 없이 요청합니다.
+
+목록 항목도 생성 응답과 동일한 `CounselingSessionResponse`를 사용합니다. 각 항목의 `id`로 상담 세션을 식별할 수 있습니다.
 
 ### Response
 
@@ -409,6 +423,7 @@ Authorization: Bearer {accessToken}
         "date": "2026-08-19",
         "title": "학원 숙제 때문에 갈등이 생겼어요",
         "content": "오늘 아이가 숙제를 하지 않아 서로 감정이 상했습니다."
+        "content": "오늘 아이가 숙제를 하지 않아 이야기하는 과정에서 서로 감정이 상했습니다."
       }
     ],
     "nextCursorId": 15,
@@ -473,6 +488,7 @@ Authorization: Bearer {accessToken}
 `DRAFT` 또는 `FAILED` 상태에서만 시작할 수 있습니다. 시작하면 상태가 `RECORDING`으로 바뀌고 `startedAt`이 기록됩니다.
 
 `RECORDING`, `TRANSCRIBING`, `ANALYZING`, `COMPLETED` 상태에서 호출하면 `409 Conflict`가 반환됩니다.
+다음 목록이 있으면 응답의 `nextCursorId`를 다음 요청의 `cursorId`로 전달합니다. `size`는 1 이상 5 이하만 허용합니다.
 
 ## 에러 응답
 
