@@ -221,6 +221,100 @@ credentials: "include"
 3. 성공하면 응답의 새 Access Token을 저장합니다.
 4. 실패하면 로그인 화면으로 이동합니다.
 
+## 5. 아이 프로필 생성
+
+로그인 후 발급받은 Access Token이 필요한 API입니다. JWT의 부모 계정 ID를 기준으로 아이 프로필의 부모가 자동 연결됩니다.
+
+### Request
+
+```http
+POST /api/children
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "민준",
+  "birthDate": "2016-05-12",
+  "gender": "MALE"
+}
+```
+
+`gender`는 `MALE` 또는 `FEMALE`만 허용합니다.
+
+### Response
+
+상태 코드: `201 Created`
+
+```json
+{
+  "message": "아이 프로필 생성 성공",
+  "data": {
+    "id": 1,
+    "name": "민준",
+    "birthDate": "2016-05-12",
+    "gender": "MALE",
+    "profileImageUrl": null
+  }
+}
+```
+
+## 6. 아이 프로필 이미지 업로드
+
+로그인한 부모가 본인이 소유한 아이 프로필에 이미지를 업로드합니다. 이미지 파일은 S3에 저장되고, DB에는 S3 객체 키만 저장됩니다.
+
+### Request
+
+```http
+POST /api/children/{childProfileId}/profile-image
+Authorization: Bearer {accessToken}
+Content-Type: multipart/form-data
+```
+
+Postman의 `form-data`에서 다음 항목을 추가합니다.
+
+| Key | Type | 설명 |
+| --- | --- | --- |
+| `file` | File | JPEG, PNG, WebP 이미지, 최대 5MB |
+
+### Response
+
+상태 코드: `200 OK`
+
+```json
+{
+  "message": "프로필 이미지 업로드 성공",
+  "data": {
+    "id": 1,
+    "name": "민준",
+    "birthDate": "2016-05-12",
+    "gender": "MALE",
+    "profileImageUrl": "https://s3-presigned-url..."
+  }
+}
+```
+
+`profileImageUrl`은 private S3 객체를 읽기 위한 Presigned URL이며 10분 후 만료됩니다. 같은 API로 다시 업로드하면 기존 이미지가 교체됩니다.
+
+다른 부모의 `childProfileId`를 사용하면 `404 Not Found`가 반환됩니다.
+
+### S3 환경변수
+
+```env
+AWS_REGION=ap-northeast-2
+S3_BUCKET=버킷명
+S3_PROFILE_IMAGE_PREFIX=children
+```
+
+EC2에서는 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`를 서버에 저장하지 않고 EC2 IAM 역할을 사용합니다. 역할에는 다음 권한이 필요합니다.
+
+```text
+s3:PutObject
+s3:GetObject
+s3:DeleteObject
+```
+
 ## 에러 응답
 
 에러도 `CommonResponse<Void>` 형식을 사용합니다.

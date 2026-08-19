@@ -1,7 +1,10 @@
 package com.ktb.hackathon.entity;
 
+import com.ktb.hackathon.entity.enums.ChildGender;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,6 +17,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 
 @Getter
 @Entity
@@ -33,15 +38,27 @@ public class ChildProfile extends BaseTimeEntity {
 	private ParentAccount parentAccount;
 
 	@Column(nullable = false, length = 100)
-	private String nickname;
+	private String name;
 
-	@Column(name = "birth_year", nullable = false)
-	private Integer birthYear;
+	@Column(name = "birth_date", nullable = false)
+	private LocalDate birthDate;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private ChildGender gender;
+
+	@Column(name = "profile_image_key", length = 500)
+	private String profileImageKey;
 
 	@Builder
-	private ChildProfile(ParentAccount parentAccount, String nickname, Integer birthYear) {
+	private ChildProfile(ParentAccount parentAccount, String name, LocalDate birthDate, ChildGender gender) {
 		this.parentAccount = parentAccount;
-		this.nickname = nickname;
-		this.birthYear = birthYear;
+		this.name = name;
+		this.birthDate = birthDate;
+		this.gender = gender;
+	}
+
+	public void updateProfileImageKey(String profileImageKey) {
+		this.profileImageKey = profileImageKey;
 	}
 }

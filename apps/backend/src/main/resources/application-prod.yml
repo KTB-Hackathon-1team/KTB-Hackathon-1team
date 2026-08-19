@@ -15,3 +15,7 @@ app:
     refresh-cookie-secure: ${COOKIE_SECURE:true}
     refresh-cookie-same-site: '${COOKIE_SAME_SITE:None}'
     cors-allowed-origin: ${CORS_ALLOWED_ORIGIN}
+  s3:
+    region: ${AWS_REGION}
+    bucket: ${S3_BUCKET}
+    profile-image-prefix: ${S3_PROFILE_IMAGE_PREFIX:children}
