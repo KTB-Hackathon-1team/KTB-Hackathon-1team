@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @Service
 public class ChildProfileService {
 
@@ -50,6 +52,15 @@ public class ChildProfileService {
 			.build();
 
 		return toResponse(childProfileRepository.save(childProfile));
+	}
+
+	@Transactional(readOnly = true)
+	public List<ChildProfileResponse> findAll(AuthenticatedUser authenticatedUser) {
+		return childProfileRepository.findAllByParentAccountIdOrderByCreatedAtAsc(
+			authenticatedUser.parentAccountId()
+		).stream()
+			.map(this::toResponse)
+			.toList();
 	}
 
 	@Transactional
