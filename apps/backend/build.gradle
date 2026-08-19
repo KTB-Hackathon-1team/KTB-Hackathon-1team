@@ -7,6 +7,10 @@ plugins {
 group = 'com.ktb'
 version = '0.0.1-SNAPSHOT'
 
+ext {
+	awsSdkVersion = '2.46.8'
+}
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(26)
@@ -23,6 +27,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.security:spring-security-oauth2-jose'
+	implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")
+	implementation 'software.amazon.awssdk:s3'
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
