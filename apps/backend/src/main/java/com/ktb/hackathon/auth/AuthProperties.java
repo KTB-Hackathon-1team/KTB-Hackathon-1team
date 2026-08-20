@@ -8,6 +8,6 @@ public record AuthProperties(
 	String refreshCookiePath,
 	boolean refreshCookieSecure,
 	String refreshCookieSameSite,
-	String corsAllowedOrigin
+	List<String> corsAllowedOrigin
 ) {
 }
