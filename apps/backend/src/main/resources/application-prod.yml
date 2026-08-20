@@ -19,3 +19,10 @@ app:
     region: ${AWS_REGION}
     bucket: ${S3_BUCKET}
     profile-image-prefix: ${S3_PROFILE_IMAGE_PREFIX:children}
+
+logging:
+  level:
+    root: INFO
+    com.ktb.hackathon: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web.cors: DEBUG
