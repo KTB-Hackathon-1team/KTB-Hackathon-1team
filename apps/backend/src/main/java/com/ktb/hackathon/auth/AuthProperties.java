@@ -1,6 +1,7 @@
 package com.ktb.hackathon.auth;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import java.util.*;
 
 @ConfigurationProperties(prefix = "app.auth")
 public record AuthProperties(
