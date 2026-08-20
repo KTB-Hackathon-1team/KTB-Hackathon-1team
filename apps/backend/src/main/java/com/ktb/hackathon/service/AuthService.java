@@ -8,6 +8,11 @@ import com.ktb.hackathon.entity.RefreshToken;
 import com.ktb.hackathon.exception.AuthException;
 import com.ktb.hackathon.repository.ParentAccountRepository;
 import com.ktb.hackathon.repository.RefreshTokenRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -16,10 +21,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.HexFormat;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -145,7 +146,7 @@ public class AuthService {
 		return new AuthException(
 			HttpStatus.UNAUTHORIZED,
 			"INVALID_CREDENTIALS",
-			"loginId 또는 password가 올바르지 않습니다."
+			"아이디 또는 비밀번호가 올바르지 않습니다."
 		);
 	}
 
