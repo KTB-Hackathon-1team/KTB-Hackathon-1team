@@ -44,6 +44,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests(authorize -> authorize
 				.requestMatchers("/api/auth/**").permitAll()
 				.requestMatchers("/api/children/**").hasRole("PARENT")
+				.requestMatchers("/api/voice/**").hasRole("PARENT")
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

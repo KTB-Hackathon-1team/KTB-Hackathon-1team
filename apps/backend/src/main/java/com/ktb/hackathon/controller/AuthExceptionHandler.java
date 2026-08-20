@@ -3,6 +3,8 @@ package com.ktb.hackathon.controller;
 import com.ktb.hackathon.dto.response.CommonResponse;
 import com.ktb.hackathon.exception.AuthException;
 import com.ktb.hackathon.exception.ImageStorageException;
+import com.ktb.hackathon.exception.SummarizationException;
+import com.ktb.hackathon.exception.VoiceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -20,6 +22,18 @@ public class AuthExceptionHandler {
 
 	@ExceptionHandler(ImageStorageException.class)
 	public ResponseEntity<CommonResponse<Void>> handleImageStorageException(ImageStorageException exception) {
+		return ResponseEntity.status(exception.getStatus())
+			.body(CommonResponse.<Void>of(exception.getMessage(), null));
+	}
+
+	@ExceptionHandler(VoiceException.class)
+	public ResponseEntity<CommonResponse<Void>> handleVoiceException(VoiceException exception) {
+		return ResponseEntity.status(exception.getStatus())
+			.body(CommonResponse.<Void>of(exception.getMessage(), null));
+	}
+
+	@ExceptionHandler(SummarizationException.class)
+	public ResponseEntity<CommonResponse<Void>> handleSummarizationException(SummarizationException exception) {
 		return ResponseEntity.status(exception.getStatus())
 			.body(CommonResponse.<Void>of(exception.getMessage(), null));
 	}

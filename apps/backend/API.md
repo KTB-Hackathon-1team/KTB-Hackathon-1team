@@ -588,7 +588,7 @@ Authorization: Bearer {accessToken}
 
 ## 15. 대화 JSON 저장
 
-voice-client가 대화 종료 후 생성한 handoff JSON을 저장합니다. `turns`는 `ConversationMessage`로 저장되고, 저장된 대화는 상담 상세 조회에서 `conversation`으로 반환됩니다. `analysisReport`는 추후 AI 분석 결과를 저장하기 위한 영역입니다.
+voice-client가 대화 종료 후 생성한 handoff JSON을 저장합니다. `turns`는 `ConversationMessage`로 저장되고, 저장된 대화는 상담 상세 조회에서 `conversation`으로 반환됩니다. 대화 저장이 커밋된 뒤 백엔드가 요약 서버를 동기 호출하며, 요약 서버가 같은 RDS의 `AnalysisReport`를 저장한 뒤 상담 세션을 `COMPLETED`로 변경합니다.
 
 ### Request
 
@@ -624,7 +624,59 @@ Content-Type: application/json
 
 상태 코드: `200 OK`
 
-응답은 저장된 `conversation`이 포함된 상담 세션 상세 응답과 동일한 형식입니다.
+응답은 저장된 `conversation`과 요약 서버가 저장한 `analysisReport`가 포함된 상담 세션 상세 응답과 동일한 형식입니다. 요약 서버 오류 시 대화 원문은 보존되고 세션은 `FAILED` 상태가 되며 `502 Bad Gateway`가 반환됩니다.
+
+## 16. Realtime 음성 통화 임시 키 발급
+
+로그인한 부모가 브라우저 음성 통화를 시작할 때 호출합니다. 백엔드는 서버 환경변수의 OpenAI API 키로 Realtime 임시 키를 발급받은 뒤, 브라우저에는 짧은 수명의 `clientSecret`만 반환합니다.
+
+### Request
+
+```http
+POST /api/voice/realtime-token
+Authorization: Bearer {accessToken}
+```
+
+Request body는 없습니다. 부모 권한이 없는 요청은 거부됩니다.
+
+### Response
+
+```json
+{
+  "message": "Realtime 임시 키 발급 성공",
+  "data": {
+    "clientSecret": "ek_...",
+    "expiresAt": 1760000000
+  }
+}
+```
+
+백엔드는 다음 환경변수만 사용합니다. 실제 값은 `.env`나 배포 환경에만 설정하고 저장소에는 커밋하지 않습니다.
+
+```env
+OPENAI_API_KEY=sk-...
+OPENAI_REALTIME_CLIENT_SECRETS_URL=https://api.openai.com/v1/realtime/client_secrets
+SUMMARY_SERVER_URL=http://54.180.117.230:8000
+SUMMARY_CONNECT_TIMEOUT=5s
+SUMMARY_READ_TIMEOUT=60s
+```
+
+`OPENAI_REALTIME_CLIENT_SECRETS_URL`은 기본값이 있으므로 일반적으로 생략할 수 있습니다. 프론트에는 `OPENAI_API_KEY` 또는 `VITE_OPENAI_API_KEY`를 설정하지 않습니다.
+
+상담 handoff가 완료되면 백엔드는 다음 요청으로 요약 서버를 호출합니다.
+
+```http
+POST /summarize
+Content-Type: application/json
+```
+
+```json
+{
+  "session_id": 123
+}
+```
+
+요약 서버의 응답 `session_id`가 요청한 상담 세션 ID와 일치하고, 같은 RDS의 `analysis_reports`에 결과가 저장된 경우에만 상담 세션을 `COMPLETED`로 처리합니다.
 
 ## 에러 응답
 
@@ -648,6 +700,7 @@ Content-Type: application/json
 | 상담 세션을 찾을 수 없음 | `404 Not Found` | `상담 세션을 찾을 수 없습니다.` |
 | 녹음 시작 불가 상태 | `409 Conflict` | `현재 상담 상태에서는 녹음을 시작할 수 없습니다.` |
 | 대화 저장 불가 상태 | `409 Conflict` | `RECORDING 상태의 상담 세션만 대화를 저장할 수 있습니다.` |
+| 상담 요약 서버 오류 | `502 Bad Gateway` | `상담 요약 서버에 연결할 수 없습니다.` 또는 요약 응답 오류 메시지 |
 
 ## CORS 및 프론트 환경
 
