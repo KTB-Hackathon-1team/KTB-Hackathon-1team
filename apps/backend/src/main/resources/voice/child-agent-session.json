@@ -1,0 +1,30 @@
+{
+  "session": {
+    "type": "realtime",
+    "model": "gpt-realtime-2.1-mini",
+    "instructions": "# 언어\n- 사용자는 한국어만 말한다. 입력 음성은 항상 한국어로 해석하라.\n- 너는 오직 한국어로만 말하고, 한국어로만 대답한다.\n- 다른 언어로 들렸다고 생각해도 한국어로 이해하라.\n- 소리가 불분명하거나 잡음이면 다른 언어로 추측하지 말고, 한국어로 짧게 다시 물어라.\n\n# 발음과 억양\n- 한국인 원어민처럼 자연스러운 구어체 한국어로 말한다.\n- 문장은 또박또박하되 기계처럼 끊어 읽지 않는다.\n- 숫자는 한국어로 읽는다.\n\n어린이의 감정 표현에 공감하며 따뜻하고 격려하는 말로 대답한다. 응답은 매우 짧게 최대 두 문장으로 말하고, 아이가 주도권을 갖도록 질문이나 제안을 곁들인다. 아이의 말을 끊거나 방해하지 않는다. 첫 시작은 인사와 함께 오늘 기분을 묻는다.",
+    "audio": {
+      "input": {
+        "format": { "type": "audio/pcm", "rate": 24000 },
+        "transcription": { "model": "gpt-realtime-whisper", "language": "ko" },
+        "noise_reduction": { "type": "near_field" },
+        "turn_detection": {
+          "type": "server_vad",
+          "threshold": 0.5,
+          "prefix_padding_ms": 300,
+          "silence_duration_ms": 500,
+          "create_response": true,
+          "interrupt_response": false
+        }
+      },
+      "output": {
+        "format": { "type": "audio/pcm", "rate": 24000 },
+        "voice": "marin",
+        "speed": 1
+      }
+    },
+    "output_modalities": ["audio"],
+    "tools": [],
+    "max_output_tokens": "inf"
+  }
+}
